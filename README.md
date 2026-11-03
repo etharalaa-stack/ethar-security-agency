@@ -21,3 +21,4 @@ docker compose up --build
 ```
 
 Use `coolify.compose.yaml` on Coolify. Set `PORT`, secrets, and persistent volumes for `data/` and `generated_reports/`.
+# ethar-security-agency
