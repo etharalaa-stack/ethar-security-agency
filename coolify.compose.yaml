@@ -1,0 +1,23 @@
+# Coolify / Railway-friendly compose (set env in dashboard; mount volumes in Coolify UI)
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+    volumes:
+      - ./data:/app/data
+      - ./generated_reports:/app/generated_reports
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m app.worker
+    volumes:
+      - ./data:/app/data
+      - ./generated_reports:/app/generated_reports
+    depends_on:
+      - api
