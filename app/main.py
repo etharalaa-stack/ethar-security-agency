@@ -160,7 +160,7 @@ async def admin_generate_pitch_links(
     secret: str = Query(...),
     settings: Settings = Depends(get_settings),
 ) -> PitchGenerateResponse:
-    if secret != settings.admin_secret:
+    if secret.strip() != settings.admin_secret.strip():
         raise HTTPException(status_code=403, detail="Invalid admin secret.")
     items = generate_pitch_batch(
         settings.frontend_url,
@@ -467,7 +467,7 @@ async def approve_order(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> AdminApproveResponse:
-    if secret != settings.admin_secret:
+    if secret.strip() != settings.admin_secret.strip():
         raise HTTPException(status_code=403, detail="Invalid admin secret.")
 
     result = await db.execute(select(Order).where(Order.order_code == order_code))

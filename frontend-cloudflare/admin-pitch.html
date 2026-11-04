@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Pitch CRM — ETHAR LABS UK LTD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/config.local.js"></script>
+  <script src="assets/config.production.js"></script>
+  <script src="assets/bootstrap-config.js"></script>
+</head>
+<body class="bg-[#0B0F19] text-slate-100 min-h-screen">
+  <nav class="border-b border-slate-800 bg-[#0d1320] px-4 py-4 max-w-4xl mx-auto flex justify-between">
+    <a href="index.html" class="text-cyan-400 font-semibold">ETHAR LABS UK LTD</a>
+    <span class="text-xs text-slate-500">Admin Pitch CRM · Company No. 17032523</span>
+  </nav>
+  <main class="max-w-4xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold">Prospect Pitch Generator</h1>
+    <p class="text-slate-400 text-sm mt-2 mb-6">Generate personalized pitch links and outreach email templates. Requires admin secret.</p>
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <input id="admin-secret" type="password" placeholder="Admin secret" class="bg-[#111827] border border-slate-700 rounded-lg px-3 py-2" />
+      <input id="frontend-base" placeholder="Frontend base (optional override)" class="bg-[#111827] border border-slate-700 rounded-lg px-3 py-2" />
+    </div>
+    <label class="block text-sm text-slate-400 mb-2">Prospects (one per line: domain,Organization Name)</label>
+    <textarea id="prospect-list" rows="8" class="w-full bg-[#111827] border border-slate-700 rounded-lg px-3 py-2 font-mono text-sm" placeholder="example.com,Acme Corp&#10;client.io,Client Inc"></textarea>
+    <button id="generate-pitches" class="mt-4 px-6 py-3 rounded-lg bg-emerald-500 text-[#0B0F19] font-semibold">Generate Pitch Links &amp; Emails</button>
+    <p id="pitch-error" class="hidden text-red-400 text-sm mt-3"></p>
+    <div id="pitch-results" class="mt-8 space-y-6"></div>
+  </main>
+  <script src="assets/admin-pitch.js"></script>
+</body>
+</html>

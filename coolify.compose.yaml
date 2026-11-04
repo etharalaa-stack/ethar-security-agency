@@ -1,4 +1,4 @@
-# Coolify / Railway-friendly compose (set env in dashboard; mount volumes in Coolify UI)
+# Legacy minimal compose (API+worker only). For Hetzner Coolify use docker-compose.coolify.yml — see COOLIFY-HETZNER.md
 services:
   api:
     build:

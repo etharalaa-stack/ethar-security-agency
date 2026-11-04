@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Tracking — ETHAR LABS UK LTD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>.tab-active{border-color:#06B6D4;color:#06B6D4;background:rgba(6,182,212,.08)}</style>
+  <script src="assets/config.local.js"></script>
+  <script src="assets/config.production.js"></script>
+  <script src="assets/bootstrap-config.js"></script>
+</head>
+<body class="bg-[#0B0F19] text-slate-100 min-h-screen">
+  <nav class="border-b border-slate-800 bg-[#0d1320]">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex flex-wrap justify-between gap-2">
+      <a href="index.html" class="font-semibold text-cyan-400">ETHAR LABS UK LTD</a>
+      <span class="text-xs text-slate-500">Company No. 17032523 · Client Portal</span>
+    </div>
+  </nav>
+  <main class="max-w-4xl mx-auto px-4 py-10">
+    <h1 class="text-2xl md:text-3xl font-bold">Live Order Tracking</h1>
+    <p class="text-slate-400 mt-2 mb-6">Itemized invoice, milestone payments, and engineering desk progress.</p>
+    <div class="flex gap-2 mb-6">
+      <input id="order-search" class="flex-1 bg-[#111827] border border-slate-700 rounded-lg px-4 py-2 font-mono uppercase" placeholder="ORD-9042" />
+      <button id="load-order" class="px-5 py-2 rounded-lg bg-emerald-500 text-[#0B0F19] font-semibold">Load</button>
+    </div>
+    <p id="track-error" class="hidden text-red-400 text-sm mb-4"></p>
+    <p id="poll-status" class="text-xs text-slate-500 mb-4"></p>
+    <div class="mb-8">
+      <div class="h-2 bg-slate-800 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-700" style="width:0%"></div></div>
+      <p id="progress-label" class="text-xs text-slate-400 mt-2">0% complete</p>
+    </div>
+    <section id="order-meta" class="bg-[#111827] border border-slate-800 rounded-xl p-6 mb-6"></section>
+    <section class="bg-[#111827] border border-slate-800 rounded-xl p-6 mb-6">
+      <h2 class="font-semibold mb-4">Itemized Engineering Invoice</h2>
+      <div id="invoice-panel"></div>
+    </section>
+    <section class="bg-[#111827] border border-slate-800 rounded-xl p-6 mb-6">
+      <h2 class="font-semibold mb-4">Milestone Payment Status</h2>
+      <div id="milestones-panel"></div>
+      <form id="milestone-pay-form" class="hidden mt-6 border-t border-slate-700 pt-4 space-y-3">
+        <p class="text-sm font-semibold text-cyan-400" id="milestone-due-label"></p>
+        <div class="flex gap-2 flex-wrap text-sm">
+          <button type="button" data-payment-tab="usdt_bep20" class="tab-active px-3 py-1 border border-slate-600 rounded-lg">BEP20</button>
+          <button type="button" data-payment-tab="usdt_trc20" class="px-3 py-1 border border-slate-600 rounded-lg">TRC20</button>
+          <button type="button" data-payment-tab="card_reference" class="px-3 py-1 border border-slate-600 rounded-lg">Card Ref</button>
+        </div>
+        <div data-payment-panel="usdt_bep20"><input id="ms-tx-bep20" placeholder="TxHash" class="w-full bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" /></div>
+        <div data-payment-panel="usdt_trc20" class="hidden"><input id="ms-tx-trc20" placeholder="TxHash" class="w-full bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" /></div>
+        <div data-payment-panel="card_reference"><input id="ms-card-ref" placeholder="STRIPE-TEST-002" class="w-full bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" /></div>
+        <p id="milestone-error" class="hidden text-red-400 text-sm"></p>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 text-[#0B0F19] font-semibold">Submit Milestone Payment</button>
+      </form>
+    </section>
+    <section class="bg-[#111827] border border-slate-800 rounded-xl p-6 mb-6">
+      <h2 class="font-semibold mb-4">Engineering Desk Timeline</h2>
+      <div id="timeline"></div>
+    </section>
+    <section id="executive-summary" class="hidden bg-[#111827] border border-slate-800 rounded-xl p-6 mb-6">
+      <h2 class="font-semibold text-emerald-400 mb-2">Executive Summary</h2>
+      <pre class="text-sm whitespace-pre-wrap font-sans text-slate-300"></pre>
+    </section>
+    <a id="download-report" class="hidden inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-cyan-600 font-semibold" href="#"><i data-lucide="file-down" class="w-5 h-5"></i>Download Certified PDF</a>
+  </main>
+  <footer class="max-w-4xl mx-auto px-4 py-8 text-xs text-slate-500 border-t border-slate-800 mt-10">
+    ETHAR LABS UK LTD · Company No. 17032523 · <a href="privacy.html" class="text-cyan-500">Privacy</a> · <a href="terms.html" class="text-cyan-500">Terms</a>
+  </footer>
+  <script src="assets/tracker.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

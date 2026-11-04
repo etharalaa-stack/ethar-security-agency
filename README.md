@@ -2,17 +2,16 @@
 
 FastAPI API, async worker, modular audits, quick-scan, Telegram HITL.
 
-Static frontend lives in sibling folder: `../frontend-cloudflare/` (deploy to Cloudflare Pages).
+Static frontend: `frontend-cloudflare/` (included in repo; sync via `./scripts/sync-frontend.sh` from sibling if needed). See `PRODUCTION.md` and `frontend-cloudflare/README.md`.
 
-## Run locally
+## Run locally (copy/paste)
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-./start-dev.sh
+./scripts/install-all.sh
+API_PORT=9815 ./start-dev.sh
 ```
+
+**Full command list:** see [`COPY-PASTE-RUNBOOK.md`](COPY-PASTE-RUNBOOK.md)
 
 ## Docker / Coolify / Railway
 

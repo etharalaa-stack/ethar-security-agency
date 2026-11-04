@@ -13,3 +13,5 @@ generated_reports/*
 !generated_reports/.gitkeep
 .DS_Store
 *.log
+frontend-cloudflare/assets/config.local.js
+frontend-cloudflare/assets/config.production.js
