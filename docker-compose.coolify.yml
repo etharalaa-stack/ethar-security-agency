@@ -14,6 +14,12 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    environment:
+      # Coolify: route public HTTPS to nginx on internal port 80 (not 8000).
+      SERVICE_FQDN_WEB_80: /
+    labels:
+      - coolify.managed=true
+      - coolify.type=application
     depends_on:
       api:
         condition: service_healthy
@@ -27,6 +33,9 @@ services:
   api:
     build: .
     restart: unless-stopped
+    labels:
+      - coolify.managed=true
+      - coolify.type=application
     environment:
       PORT: "8000"
     volumes:
@@ -44,6 +53,9 @@ services:
   worker:
     build: .
     restart: unless-stopped
+    labels:
+      - coolify.managed=true
+      - coolify.type=application
     command: python -m app.worker
     volumes:
       - agency_data:/app/data
