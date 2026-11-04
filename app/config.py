@@ -79,6 +79,19 @@ class Settings(BaseSettings):
         return [h.strip() for h in self.trusted_hosts.split(",") if h.strip()]
 
     @property
+    def trusted_host_allowlist(self) -> list[str]:
+        """Public hosts plus Docker/internal names for container healthchecks."""
+        hosts = self.trusted_host_list
+        if not hosts:
+            return []
+        internal = ["localhost", "127.0.0.1", "api", "web", "worker"]
+        merged: list[str] = []
+        for h in hosts + internal:
+            if h and h not in merged:
+                merged.append(h)
+        return merged
+
+    @property
     def llm_enabled(self) -> bool:
         return bool(self.openai_api_key.strip())
 

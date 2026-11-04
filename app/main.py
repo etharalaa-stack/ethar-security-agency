@@ -92,7 +92,7 @@ app.add_middleware(
 )
 app.add_middleware(SecurityHeadersMiddleware)
 if _settings.trusted_host_list:
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_settings.trusted_host_list)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_settings.trusted_host_allowlist)
 
 
 @app.on_event("startup")
