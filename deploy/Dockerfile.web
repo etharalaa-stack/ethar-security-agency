@@ -1,0 +1,4 @@
+# Static UI + nginx proxy (no bind mounts — Coolify-safe)
+FROM nginx:1.27-alpine
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend-cloudflare /usr/share/nginx/html
