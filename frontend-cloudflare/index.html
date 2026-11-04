@@ -133,18 +133,20 @@
             <button type="button" data-payment-tab="usdt_trc20" class="px-3 py-1.5 text-sm border border-slate-600 rounded-lg">USDT TRC20</button>
             <button type="button" data-payment-tab="card_reference" class="px-3 py-1.5 text-sm border border-slate-600 rounded-lg">Card / Invoice Ref</button>
           </div>
+          <p id="payment-usdt-due" class="text-xs text-emerald-400 mb-2 hidden"></p>
+          <p id="card-ref-hint" class="text-xs text-slate-500 mb-2 hidden"></p>
           <div data-payment-panel="usdt_bep20" class="space-y-1">
             <p id="bep20-wallet" class="font-mono text-xs break-all text-cyan-300"></p>
             <button type="button" data-copy-wallet="bep20-wallet" class="text-xs text-emerald-400">Copy wallet</button>
-            <input id="tx-bep20" placeholder="TxHash" class="w-full mt-2 bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
+            <input id="tx-bep20" placeholder="BEP20 TxHash (0x…)" class="w-full mt-2 bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
           </div>
           <div data-payment-panel="usdt_trc20" class="hidden space-y-1">
             <p id="trc20-wallet" class="font-mono text-xs break-all text-cyan-300"></p>
             <button type="button" data-copy-wallet="trc20-wallet" class="text-xs text-emerald-400">Copy wallet</button>
-            <input id="tx-trc20" placeholder="TxHash" class="w-full mt-2 bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
+            <input id="tx-trc20" placeholder="TRC20 TxHash" class="w-full mt-2 bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
           </div>
           <div data-payment-panel="card_reference" class="hidden">
-            <input id="card-reference" placeholder="STRIPE-TEST-001" class="w-full bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
+            <input id="card-reference" placeholder="INV- or CARD- reference" class="w-full bg-[#0B0F19] border border-slate-700 rounded-lg px-3 py-2" />
           </div>
         </div>
         <p id="form-error" class="hidden text-red-400 text-sm"></p>

@@ -27,11 +27,18 @@ class Settings(BaseSettings):
 
     usdt_bep20_wallet: str = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
     usdt_trc20_wallet: str = "TYourTRC20WalletAddressHere"
+    usdt_bep20_contract: str = "0x55d398326f99059fF775485246999027B3197955"
+    usdt_trc20_contract: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    usdt_bep20_decimals: int = 18
+    usdt_trc20_decimals: int = 6
     bscscan_api_key: str = ""
     tron_api_base: str = "https://api.trongrid.io"
+    tron_api_key: str = ""
 
     stripe_webhook_secret: str = ""
     stripe_test_reference_prefix: str = "STRIPE-TEST-"
+    allow_test_payments: bool = False
+    payment_amount_tolerance_usd: float = 1.0
 
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
@@ -52,6 +59,9 @@ class Settings(BaseSettings):
     order_price_usd: float = 100.0
 
     reports_dir: Path = Path(__file__).resolve().parent.parent / "generated_reports"
+
+    def payments_allow_test_references(self) -> bool:
+        return self.allow_test_payments or self.debug
 
     @property
     def llm_enabled(self) -> bool:

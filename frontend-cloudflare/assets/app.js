@@ -145,6 +145,16 @@
       paymentPlan = "full";
       planFull.checked = true;
     }
+    const due = dueNowAmount(total);
+    const usdtDue = document.getElementById("payment-usdt-due");
+    if (usdtDue) {
+      if (paymentMethod.startsWith("usdt")) {
+        usdtDue.textContent = `Send exactly $${due.toFixed(2)} USDT (1:1 USD) to the wallet below, then paste TxHash.`;
+        usdtDue.classList.remove("hidden");
+      } else {
+        usdtDue.classList.add("hidden");
+      }
+    }
   }
 
   document.querySelectorAll("[data-open-order]").forEach((btn) => {
@@ -187,6 +197,7 @@
       document.querySelectorAll("[data-payment-panel]").forEach((p) => {
         p.classList.toggle("hidden", p.dataset.paymentPanel !== paymentMethod);
       });
+      renderTotals();
     });
   });
 
@@ -238,6 +249,17 @@
       const trc = document.getElementById("trc20-wallet");
       if (bep) bep.textContent = data.usdt_bep20_wallet;
       if (trc) trc.textContent = data.usdt_trc20_wallet;
+      const cardInput = document.getElementById("card-reference");
+      const cardHint = document.getElementById("card-ref-hint");
+      if (cardInput) {
+        cardInput.placeholder = data.allow_test_card_references
+          ? "STRIPE-TEST-001 or INV-/CARD-"
+          : "INV-12345 or CARD-…";
+      }
+      if (cardHint) {
+        cardHint.textContent = data.card_reference_hint || "";
+        cardHint.classList.toggle("hidden", paymentMethod !== "card_reference");
+      }
     } catch {
       /* fallback in HTML */
     }

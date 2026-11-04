@@ -1,5 +1,6 @@
 """FastAPI application — public and admin endpoints."""
 
+import asyncio
 import json
 import random
 from datetime import datetime
@@ -190,7 +191,25 @@ async def payment_config(settings: Settings = Depends(get_settings)) -> PaymentC
         usdt_trc20_wallet=settings.usdt_trc20_wallet,
         company_name=COMPANY_LEGAL_NAME,
         company_number=COMPANY_NUMBER,
+        allow_test_card_references=settings.payments_allow_test_references(),
     )
+
+
+async def _assert_payment_ref_unused(
+    db: AsyncSession,
+    payment_ref: str | None,
+    *,
+    exclude_order_code: str | None = None,
+) -> None:
+    if not payment_ref or not str(payment_ref).strip():
+        return
+    ref = str(payment_ref).strip()
+    q = select(Order).where(Order.tx_hash == ref)
+    if exclude_order_code:
+        q = q.where(Order.order_code != exclude_order_code)
+    existing = await db.execute(q)
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="This transaction hash or reference was already used.")
 
 
 @app.get(f"{get_settings().api_prefix}/sample-report", response_model=SampleReportPreview)
@@ -221,11 +240,30 @@ async def sample_report() -> SampleReportPreview:
 async def stripe_webhook(
     request: Request,
     settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_db),
 ):
     payload = await request.body()
     sig = request.headers.get("Stripe-Signature")
     if not verify_stripe_webhook_signature(payload, sig, settings.stripe_webhook_secret):
         raise HTTPException(status_code=400, detail="Invalid Stripe signature.")
+    try:
+        event = json.loads(payload.decode("utf-8"))
+    except json.JSONDecodeError:
+        return {"received": True}
+    if event.get("type") == "checkout.session.completed":
+        session = (event.get("data") or {}).get("object") or {}
+        if session.get("payment_status") == "paid":
+            order_code = (session.get("metadata") or {}).get("order_code")
+            ref = session.get("id") or session.get("payment_intent")
+            if order_code and ref:
+                result = await db.execute(select(Order).where(Order.order_code == order_code))
+                order = result.scalar_one_or_none()
+                if order and not order.payment_verified:
+                    order.tx_hash = f"STRIPE-{ref}"
+                    order.payment_verified = True
+                    order.status = OrderStatus.IN_PROGRESS.value
+                    await db.commit()
+                    asyncio.create_task(process_order_pipeline(order.id))
     return {"received": True}
 
 
@@ -249,11 +287,13 @@ async def create_order(
 
     due_now = amount_due_now(milestones)
     payment_ref = body.tx_hash if body.payment_method.startswith("usdt") else body.card_reference
+    await _assert_payment_ref_unused(db, payment_ref)
     verified, pay_msg = await verify_payment(
         settings,
         body.payment_method,
         body.tx_hash,
         body.card_reference,
+        expected_amount_usd=due_now if body.payment_method.startswith("usdt") else None,
     )
 
     if verified:
@@ -358,16 +398,19 @@ async def pay_next_milestone(
     if not next_ms:
         raise HTTPException(status_code=400, detail="All milestones are already paid.")
 
+    payment_ref = body.tx_hash if body.payment_method.startswith("usdt") else body.card_reference
+    await _assert_payment_ref_unused(db, payment_ref, exclude_order_code=order_code)
+    due_usd = float(next_ms["amount_usd"])
     verified, pay_msg = await verify_payment(
         settings,
         body.payment_method,
         body.tx_hash,
         body.card_reference,
+        expected_amount_usd=due_usd if body.payment_method.startswith("usdt") else None,
     )
     if not verified:
         raise HTTPException(status_code=402, detail=pay_msg)
 
-    payment_ref = body.tx_hash if body.payment_method.startswith("usdt") else body.card_reference
     milestones, paid = apply_milestone_payment(
         milestones, int(next_ms["milestone"]), payment_ref
     )
