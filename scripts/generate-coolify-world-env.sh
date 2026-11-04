@@ -14,6 +14,22 @@ fi
 DOMAIN="${DOMAIN#https://}"
 DOMAIN="${DOMAIN#http://}"
 DOMAIN="${DOMAIN%%/*}"
+EXTRA="${EXTRA_DOMAINS:-${2:-}}"
+# Comma-separated extra hostnames (e.g. www.api.etharlabs.com)
+IFS=',' read -ra EXTRA_ARR <<< "${EXTRA// /}"
+
+hosts=("$DOMAIN")
+origins=("https://${DOMAIN}")
+for h in "${EXTRA_ARR[@]}"; do
+  [[ -z "$h" ]] && continue
+  h="${h#https://}"
+  h="${h#http://}"
+  h="${h%%/*}"
+  hosts+=("$h")
+  origins+=("https://${h}")
+done
+TRUSTED_HOSTS="$(IFS=,; echo "${hosts[*]}")"
+CORS_ORIGINS="$(IFS=,; echo "${origins[*]}")"
 
 load() {
   grep -E "^${1}=" "$ROOT/.env" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true
@@ -44,8 +60,8 @@ RATE_LIMIT_ENABLED=true
 
 PUBLIC_API_BASE_URL=https://${DOMAIN}
 FRONTEND_URL=https://${DOMAIN}
-CORS_ORIGINS=https://${DOMAIN}
-TRUSTED_HOSTS=${DOMAIN}
+CORS_ORIGINS=${CORS_ORIGINS}
+TRUSTED_HOSTS=${TRUSTED_HOSTS}
 
 DATABASE_URL=sqlite+aiosqlite:///./data/agency.db
 DATABASE_URL_SYNC=sqlite:///./data/agency.db
