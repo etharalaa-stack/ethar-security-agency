@@ -130,6 +130,18 @@ def _require_order_access(
         raise HTTPException(status_code=403, detail="Invalid or missing order access token.")
 
 
+def _assert_usdt_only_payment(settings: Settings, payment_method: str) -> None:
+    if not settings.payment_usdt_only:
+        return
+    if payment_method == "card_reference" and settings.payments_allow_test_references():
+        return
+    if payment_method == "card_reference":
+        raise HTTPException(
+            status_code=400,
+            detail="ETHAR LABS accepts USDT (BEP20/TRC20) only. Select a USDT network and submit TxHash.",
+        )
+
+
 def _rate_limit(request: Request, *, bucket: str, limit: int, window: int = 60) -> None:
     settings = get_settings()
     if not settings.rate_limit_enabled:
@@ -244,12 +256,16 @@ async def parts_catalog() -> PartsCatalogResponse:
 
 @app.get(f"{get_settings().api_prefix}/config/payments", response_model=PaymentConfigResponse)
 async def payment_config(settings: Settings = Depends(get_settings)) -> PaymentConfigResponse:
+    card_on = not settings.payment_usdt_only or settings.payments_allow_test_references()
     return PaymentConfigResponse(
         usdt_bep20_wallet=settings.usdt_bep20_wallet,
         usdt_trc20_wallet=settings.usdt_trc20_wallet,
         company_name=COMPANY_LEGAL_NAME,
         company_number=COMPANY_NUMBER,
-        allow_test_card_references=settings.payments_allow_test_references(),
+        payment_usdt_only=settings.payment_usdt_only,
+        card_reference_enabled=card_on,
+        default_payment_method="usdt_bep20",
+        card_reference_hint="Test references only (dev)." if card_on else "",
     )
 
 
@@ -300,6 +316,8 @@ async def stripe_webhook(
     settings: Settings = Depends(get_settings),
     db: AsyncSession = Depends(get_db),
 ):
+    if settings.payment_usdt_only or not settings.stripe_webhook_secret.strip():
+        raise HTTPException(status_code=404, detail="Stripe is disabled; USDT settlement only.")
     payload = await request.body()
     sig = request.headers.get("Stripe-Signature")
     if not verify_stripe_webhook_signature(payload, sig, settings.stripe_webhook_secret):
@@ -334,6 +352,7 @@ async def create_order(
     settings: Settings = Depends(get_settings),
 ) -> OrderCreateResponse:
     _rate_limit(request, bucket="create-order", limit=10, window=60)
+    _assert_usdt_only_payment(settings, body.payment_method)
     target = body.target_asset.strip()
     if target.lower().startswith(("http://", "https://")):
         assert_public_scan_target(target)
@@ -467,6 +486,7 @@ async def pay_next_milestone(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
     _require_order_access(settings, order, token, x_order_token)
+    _assert_usdt_only_payment(settings, body.payment_method)
 
     milestones = parse_milestones(order.milestones_json)
     next_ms = next((m for m in milestones if not m.get("paid")), None)

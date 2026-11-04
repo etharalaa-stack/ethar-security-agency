@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     tron_api_base: str = "https://api.trongrid.io"
     tron_api_key: str = ""
 
+    payment_usdt_only: bool = True
     stripe_webhook_secret: str = ""
     stripe_test_reference_prefix: str = "STRIPE-TEST-"
     allow_test_payments: bool = False

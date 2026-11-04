@@ -24,7 +24,7 @@
 | API surface | `/docs` hidden when `DEBUG=false` |
 | Headers | SecurityHeadersMiddleware + nginx hardening |
 | CORS | Restrict to your domain(s); avoid `*` + credentials in production |
-| Payments | USDT amount/wallet verify; `ALLOW_TEST_PAYMENTS=false` live |
+| Payments | **USDT only** (`PAYMENT_USDT_ONLY=true`); see `USDT-ONLY-LAUNCH.md` |
 
 ---
 

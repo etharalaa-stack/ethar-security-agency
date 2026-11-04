@@ -183,9 +183,11 @@ class PaymentConfigResponse(BaseModel):
     usdt_trc20_wallet: str
     company_name: str
     company_number: str
-    allow_test_card_references: bool = False
+    payment_usdt_only: bool = True
+    card_reference_enabled: bool = False
+    default_payment_method: PaymentMethodLiteral = "usdt_bep20"
     usdt_amount_note: str = "Send the exact USD total as USDT (1:1) to the wallet below."
-    card_reference_hint: str = "Live: INV-* or CARD-* from your invoice. Test: STRIPE-TEST-* when enabled."
+    card_reference_hint: str = ""
 
 
 class HealthResponse(BaseModel):

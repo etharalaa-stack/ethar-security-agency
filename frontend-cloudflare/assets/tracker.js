@@ -26,7 +26,7 @@
     const s = q.toString();
     return s ? `?${s}` : "";
   }
-  let paymentMethod = "card_reference";
+  let paymentMethod = "usdt_bep20";
 
   if (input && currentOrder) input.value = currentOrder;
 
@@ -219,6 +219,29 @@
     }
   });
 
+  async function loadPaymentUi() {
+    try {
+      const res = await fetch(`${API_BASE}/config/payments`);
+      if (!res.ok) return;
+      const data = await res.json();
+      paymentMethod = data.default_payment_method || "usdt_bep20";
+      const cardTab = document.querySelector('[data-payment-tab="card_reference"]');
+      const cardPanel = document.querySelector('[data-payment-panel="card_reference"]');
+      const showCard = !!data.card_reference_enabled;
+      cardTab?.classList.toggle("hidden", !showCard);
+      cardPanel?.classList.toggle("hidden", !showCard || paymentMethod !== "card_reference");
+      document.querySelectorAll("[data-payment-tab]").forEach((t) => {
+        t.classList.toggle("tab-active", t.dataset.paymentTab === paymentMethod);
+      });
+      document.querySelectorAll("[data-payment-panel]").forEach((p) => {
+        p.classList.toggle("hidden", p.dataset.paymentPanel !== paymentMethod);
+      });
+    } catch {
+      /* defaults */
+    }
+  }
+
+  loadPaymentUi();
   loadBtn?.addEventListener("click", () => fetchOrder(input.value, false));
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") fetchOrder(input.value, false);

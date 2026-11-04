@@ -240,6 +240,34 @@
     renderTotals();
   }
 
+  function applyPaymentUi(data) {
+    paymentMethod = data.default_payment_method || "usdt_bep20";
+    const cardTab = document.querySelector('[data-payment-tab="card_reference"]');
+    const cardPanel = document.querySelector('[data-payment-panel="card_reference"]');
+    const showCard = !!data.card_reference_enabled;
+    cardTab?.classList.toggle("hidden", !showCard);
+    if (!showCard && paymentMethod === "card_reference") paymentMethod = "usdt_bep20";
+    document.querySelectorAll("[data-payment-tab]").forEach((t) => {
+      t.classList.toggle("tab-active", t.dataset.paymentTab === paymentMethod);
+    });
+    document.querySelectorAll("[data-payment-panel]").forEach((p) => {
+      p.classList.toggle("hidden", p.dataset.paymentPanel !== paymentMethod);
+    });
+    const cardInput = document.getElementById("card-reference");
+    const cardHint = document.getElementById("card-ref-hint");
+    if (cardInput && showCard) {
+      cardInput.placeholder = "STRIPE-TEST-001 (dev only)";
+    }
+    if (cardHint) {
+      cardHint.textContent = data.card_reference_hint || "";
+      cardHint.classList.toggle("hidden", !showCard || paymentMethod !== "card_reference");
+    }
+    const usdtDue = document.getElementById("payment-usdt-due");
+    if (usdtDue && data.payment_usdt_only) {
+      usdtDue.classList.remove("hidden");
+    }
+  }
+
   async function loadWallets() {
     try {
       const res = await fetch(`${API_BASE}/config/payments`);
@@ -249,17 +277,8 @@
       const trc = document.getElementById("trc20-wallet");
       if (bep) bep.textContent = data.usdt_bep20_wallet;
       if (trc) trc.textContent = data.usdt_trc20_wallet;
-      const cardInput = document.getElementById("card-reference");
-      const cardHint = document.getElementById("card-ref-hint");
-      if (cardInput) {
-        cardInput.placeholder = data.allow_test_card_references
-          ? "STRIPE-TEST-001 or INV-/CARD-"
-          : "INV-12345 or CARD-…";
-      }
-      if (cardHint) {
-        cardHint.textContent = data.card_reference_hint || "";
-        cardHint.classList.toggle("hidden", paymentMethod !== "card_reference");
-      }
+      applyPaymentUi(data);
+      renderTotals();
     } catch {
       /* fallback in HTML */
     }

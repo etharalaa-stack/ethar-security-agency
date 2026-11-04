@@ -6,9 +6,9 @@
 |---------|--------|---------------------|
 | **USDT BEP20** | يرسل USDT لمحفظتك + TxHash | BscScan receipt + عقد USDT + المبلغ |
 | **USDT TRC20** | يرسل USDT + TxHash | TronGrid events + المحفظة + المبلغ |
-| **Card / Invoice Ref** | `INV-*` أو `CARD-*` | تسجيل + مطابقة يدوية |
-| **STRIPE-TEST-*** | تجريبي فقط | يعمل إذا `ALLOW_TEST_PAYMENTS=true` أو `DEBUG=true` |
-| **Stripe Checkout** | (اختياري) | Webhook `checkout.session.completed` + metadata `order_code` |
+| **USDT BEP20 / TRC20** | **الإنتاج** | TxHash + تحقق مبلغ ومحفظة |
+| **Card / test ref** | dev فقط | `ALLOW_TEST_PAYMENTS=true` مع `PAYMENT_USDT_ONLY` |
+| **Stripe** | **معطّل** | `PAYMENT_USDT_ONLY=true` (افتراضي) |
 
 ## خطط الدفع
 
@@ -32,11 +32,9 @@ STRIPE_TEST_REFERENCE_PREFIX=STRIPE-TEST-
 PAYMENT_AMOUNT_TOLERANCE_USD=1.0
 ```
 
-## Stripe (اختياري)
+## USDT-only launch doc
 
-1. أنشئ Checkout Session مع `metadata.order_code=ORD-XXXX`.
-2. Webhook URL: `https://YOUR-DOMAIN/api/v1/webhooks/stripe`
-3. عند `checkout.session.completed` يُفعَّل الطلب تلقائياً.
+See [`USDT-ONLY-LAUNCH.md`](USDT-ONLY-LAUNCH.md) and [`deploy/CLOUDFLARE-WAF.md`](deploy/CLOUDFLARE-WAF.md).
 
 ## Telegram + PDF
 
