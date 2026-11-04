@@ -1,4 +1,5 @@
 .env
+coolify-paste.env
 .venv/
 .venv-agency/
 __pycache__/
