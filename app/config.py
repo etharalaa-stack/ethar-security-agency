@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     allow_test_payments: bool = False
     payment_amount_tolerance_usd: float = 1.0
 
+    require_order_access_token: bool = True
+    trusted_hosts: str = ""
+    rate_limit_enabled: bool = True
+
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
@@ -62,6 +66,16 @@ class Settings(BaseSettings):
 
     def payments_allow_test_references(self) -> bool:
         return self.allow_test_payments or self.debug
+
+    @property
+    def expose_api_docs(self) -> bool:
+        return self.debug
+
+    @property
+    def trusted_host_list(self) -> list[str]:
+        if not self.trusted_hosts.strip():
+            return []
+        return [h.strip() for h in self.trusted_hosts.split(",") if h.strip()]
 
     @property
     def llm_enabled(self) -> bool:

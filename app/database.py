@@ -74,6 +74,7 @@ def _migrate_orders_v2(connection) -> None:
         ("payment_plan", "VARCHAR(32) DEFAULT 'full'"),
         ("paid_amount", "REAL DEFAULT 0"),
         ("milestones_json", "TEXT"),
+        ("client_access_token", "VARCHAR(64)"),
     ]
     for col, typedef in alters:
         if col not in existing:

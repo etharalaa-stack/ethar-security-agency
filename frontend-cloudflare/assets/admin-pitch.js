@@ -44,9 +44,12 @@
     }
     btn.disabled = true;
     try {
-      const res = await fetch(`${API_BASE}/admin/pitch/generate?secret=${encodeURIComponent(secret)}`, {
+      const res = await fetch(`${API_BASE}/admin/pitch/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Secret": secret,
+        },
         body: JSON.stringify({ prospects }),
       });
       const data = await res.json();

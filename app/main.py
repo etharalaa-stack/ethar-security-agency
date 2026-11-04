@@ -2,12 +2,13 @@
 
 import asyncio
 import json
-import random
+import secrets
 from datetime import datetime
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,17 +62,37 @@ from app.services.pricing_catalog import (
     paid_total,
     validate_part_ids,
 )
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.security import (
+    client_ip,
+    limiter,
+    normalize_order_code,
+    safe_report_path,
+    assert_public_scan_target,
+    verify_secret,
+)
 from app.worker import STAGE_TITLES, process_order_pipeline
 
-app = FastAPI(title="ETHAR LABS UK LTD — Security Engineering API", version=__version__)
+_settings = get_settings()
+app = FastAPI(
+    title="ETHAR LABS UK LTD — Security Engineering API",
+    version=__version__,
+    docs_url="/docs" if _settings.expose_api_docs else None,
+    redoc_url="/redoc" if _settings.expose_api_docs else None,
+    openapi_url="/openapi.json" if _settings.expose_api_docs else None,
+)
 
+_origins = _settings.cors_origin_list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_origins,
+    allow_credentials="*" not in _origins,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Admin-Secret", "X-Order-Token", "Authorization"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+if _settings.trusted_host_list:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_settings.trusted_host_list)
 
 
 @app.on_event("startup")
@@ -80,7 +101,40 @@ async def on_startup() -> None:
 
 
 def _generate_order_code() -> str:
-    return f"ORD-{random.randint(1000, 9999)}"
+    return f"ORD-{secrets.token_hex(4).upper()}"
+
+
+def _require_admin_secret(
+    settings: Settings,
+    secret: str | None = Query(None),
+    x_admin_secret: str | None = Header(None, alias="X-Admin-Secret"),
+) -> None:
+    provided = (x_admin_secret or secret or "").strip()
+    if not verify_secret(provided, settings.admin_secret):
+        raise HTTPException(status_code=403, detail="Invalid admin secret.")
+
+
+def _require_order_access(
+    settings: Settings,
+    order: Order,
+    token: str | None = Query(None, alias="token"),
+    x_order_token: str | None = Header(None, alias="X-Order-Token"),
+) -> None:
+    if not settings.require_order_access_token:
+        return
+    expected = (order.client_access_token or "").strip()
+    if not expected:
+        return
+    provided = (x_order_token or token or "").strip()
+    if not provided or not verify_secret(provided, expected):
+        raise HTTPException(status_code=403, detail="Invalid or missing order access token.")
+
+
+def _rate_limit(request: Request, *, bucket: str, limit: int, window: int = 60) -> None:
+    settings = get_settings()
+    if not settings.rate_limit_enabled:
+        return
+    limiter.check(f"{bucket}:{client_ip(request)}", limit=limit, window_seconds=window)
 
 
 def _parse_stage_logs(raw: str | None) -> list[StageLogEntry]:
@@ -150,19 +204,23 @@ async def health() -> HealthResponse:
 
 
 @app.post(f"{get_settings().api_prefix}/public/quick-scan", response_model=QuickScanResponse)
-async def public_quick_scan(body: QuickScanRequest) -> QuickScanResponse:
-    result = await run_quick_scan(body.target, body.organization)
+async def public_quick_scan(body: QuickScanRequest, request: Request) -> QuickScanResponse:
+    _rate_limit(request, bucket="quick-scan", limit=20, window=60)
+    safe_target = assert_public_scan_target(body.target)
+    result = await run_quick_scan(safe_target, body.organization)
     return QuickScanResponse(**result)
 
 
 @app.post(f"{get_settings().api_prefix}/admin/pitch/generate", response_model=PitchGenerateResponse)
 async def admin_generate_pitch_links(
     body: PitchGenerateRequest,
-    secret: str = Query(...),
+    request: Request,
     settings: Settings = Depends(get_settings),
+    secret: str | None = Query(None),
+    x_admin_secret: str | None = Header(None, alias="X-Admin-Secret"),
 ) -> PitchGenerateResponse:
-    if secret.strip() != settings.admin_secret.strip():
-        raise HTTPException(status_code=403, detail="Invalid admin secret.")
+    _rate_limit(request, bucket="admin-pitch", limit=30, window=60)
+    _require_admin_secret(settings, secret, x_admin_secret)
     items = generate_pitch_batch(
         settings.frontend_url,
         [{"domain": p.domain, "organization": p.organization or p.domain} for p in body.prospects],
@@ -270,10 +328,15 @@ async def stripe_webhook(
 @app.post(f"{get_settings().api_prefix}/orders", response_model=OrderCreateResponse)
 async def create_order(
     body: OrderCreateRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> OrderCreateResponse:
+    _rate_limit(request, bucket="create-order", limit=10, window=60)
+    target = body.target_asset.strip()
+    if target.lower().startswith(("http://", "https://")):
+        assert_public_scan_target(target)
     ok, msg = validate_part_ids(list(body.selected_parts))
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
@@ -306,6 +369,7 @@ async def create_order(
         pay_msg = f"Initial milestone underpaid. Due now: ${due_now:.2f}."
 
     order_code = _generate_order_code()
+    access_token = secrets.token_urlsafe(32)
     for _ in range(5):
         existing = await db.execute(select(Order).where(Order.order_code == order_code))
         if not existing.scalar_one_or_none():
@@ -326,6 +390,7 @@ async def create_order(
 
     order = Order(
         order_code=order_code,
+        client_access_token=access_token,
         client_email=str(body.client_email),
         organization=body.organization,
         package_type="modular",
@@ -365,7 +430,10 @@ async def create_order(
             body.target_asset,
         )
 
-    track_url = f"{settings.frontend_url.rstrip('/')}/track.html?order={order_code}"
+    track_url = (
+        f"{settings.frontend_url.rstrip('/')}/track.html?"
+        f"order={order_code}&token={access_token}"
+    )
     return OrderCreateResponse(
         order_id=order_code,
         status=order.status,
@@ -374,6 +442,7 @@ async def create_order(
         paid_amount=paid,
         amount_due_now=amount_due_now(milestones),
         track_url=track_url,
+        access_token=access_token,
     )
 
 
@@ -384,14 +453,20 @@ async def create_order(
 async def pay_next_milestone(
     order_code: str,
     body: MilestonePaymentRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    token: str | None = Query(None),
+    x_order_token: str | None = Header(None, alias="X-Order-Token"),
 ) -> MilestonePaymentResponse:
+    order_code = normalize_order_code(order_code)
+    _rate_limit(request, bucket="milestone-pay", limit=15, window=60)
     result = await db.execute(select(Order).where(Order.order_code == order_code))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
+    _require_order_access(settings, order, token, x_order_token)
 
     milestones = parse_milestones(order.milestones_json)
     next_ms = next((m for m in milestones if not m.get("paid")), None)
@@ -468,28 +543,44 @@ async def pay_next_milestone(
 
 
 @app.get(f"{get_settings().api_prefix}/orders/{{order_code}}", response_model=OrderPublicResponse)
-async def get_order(order_code: str, db: AsyncSession = Depends(get_db)) -> OrderPublicResponse:
+async def get_order(
+    order_code: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    token: str | None = Query(None),
+    x_order_token: str | None = Header(None, alias="X-Order-Token"),
+) -> OrderPublicResponse:
+    order_code = normalize_order_code(order_code)
+    _rate_limit(request, bucket="get-order", limit=60, window=60)
     result = await db.execute(select(Order).where(Order.order_code == order_code))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
+    _require_order_access(settings, order, token, x_order_token)
     return _order_to_public(order)
 
 
 @app.get(f"{get_settings().api_prefix}/orders/{{order_code}}/report")
 async def download_report(
     order_code: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    token: str | None = Query(None),
+    x_order_token: str | None = Header(None, alias="X-Order-Token"),
 ):
+    order_code = normalize_order_code(order_code)
+    _rate_limit(request, bucket="download-report", limit=30, window=60)
     result = await db.execute(select(Order).where(Order.order_code == order_code))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
+    _require_order_access(settings, order, token, x_order_token)
     if order.status != OrderStatus.COMPLETED.value or not order.pdf_filename:
         raise HTTPException(status_code=403, detail="Report not yet released.")
 
-    path = settings.reports_dir / order.pdf_filename
+    path = safe_report_path(settings.reports_dir, order.pdf_filename)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Report file missing.")
 
@@ -506,12 +597,15 @@ async def download_report(
 )
 async def approve_order(
     order_code: str,
-    secret: str = Query(...),
+    request: Request,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    secret: str | None = Query(None),
+    x_admin_secret: str | None = Header(None, alias="X-Admin-Secret"),
 ) -> AdminApproveResponse:
-    if secret.strip() != settings.admin_secret.strip():
-        raise HTTPException(status_code=403, detail="Invalid admin secret.")
+    order_code = normalize_order_code(order_code)
+    _rate_limit(request, bucket="admin-approve", limit=40, window=60)
+    _require_admin_secret(settings, secret, x_admin_secret)
 
     result = await db.execute(select(Order).where(Order.order_code == order_code))
     order = result.scalar_one_or_none()

@@ -38,6 +38,7 @@ class OrderCreateResponse(BaseModel):
     paid_amount: float
     amount_due_now: float
     track_url: str
+    access_token: str = Field(description="Required to view order status and download PDF.")
 
 
 class MilestoneStatus(BaseModel):

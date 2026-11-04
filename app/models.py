@@ -27,6 +27,7 @@ class Order(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    client_access_token: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     client_email: Mapped[str] = mapped_column(String(255))
     organization: Mapped[str] = mapped_column(String(255))
     package_type: Mapped[str] = mapped_column(String(64), default="modular")

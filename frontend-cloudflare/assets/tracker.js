@@ -17,7 +17,15 @@
   const milestoneError = document.getElementById("milestone-error");
 
   let currentOrder = params.get("order") || "";
+  let accessToken = params.get("token") || "";
   let pollTimer = null;
+
+  function orderQuery() {
+    const q = new URLSearchParams();
+    if (accessToken) q.set("token", accessToken);
+    const s = q.toString();
+    return s ? `?${s}` : "";
+  }
   let paymentMethod = "card_reference";
 
   if (input && currentOrder) input.value = currentOrder;
@@ -131,7 +139,7 @@
 
     if (order.report_available) {
       downloadBtn.classList.remove("hidden");
-      downloadBtn.href = `${API_BASE}/orders/${encodeURIComponent(order.order_code)}/report`;
+      downloadBtn.href = `${API_BASE}/orders/${encodeURIComponent(order.order_code)}/report${orderQuery()}`;
     } else downloadBtn.classList.add("hidden");
 
     const keepPolling = !["COMPLETED", "FAILED"].includes(order.status);
@@ -151,12 +159,15 @@
     }
     currentOrder = code.trim().toUpperCase();
     try {
-      const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(currentOrder)}`);
+      const res = await fetch(
+        `${API_BASE}/orders/${encodeURIComponent(currentOrder)}${orderQuery()}`
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Not found");
       renderOrder(data);
       const url = new URL(window.location.href);
       url.searchParams.set("order", currentOrder);
+      if (accessToken) url.searchParams.set("token", accessToken);
       window.history.replaceState({}, "", url);
     } catch (err) {
       if (!silent) {
@@ -191,11 +202,14 @@
         paymentMethod === "card_reference" ? document.getElementById("ms-card-ref").value.trim() : null,
     };
     try {
-      const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(currentOrder)}/milestones/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${API_BASE}/orders/${encodeURIComponent(currentOrder)}/milestones/pay${orderQuery()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Payment failed");
       await fetchOrder(currentOrder, true);
