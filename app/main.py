@@ -549,6 +549,7 @@ async def pay_next_milestone(
         paid,
         order.payment_plan,
         order.target_asset,
+        milestone_label=str(next_ms.get("label") or f"Milestone {next_ms.get('milestone')}"),
     )
 
     ms_models = [MilestoneStatus(**m) for m in milestones]
