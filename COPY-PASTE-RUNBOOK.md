@@ -356,10 +356,9 @@ OPENROUTER_APP_TITLE="ETHAR LABS UK LTD"
 ## 17) إيقاف كل الخدمات (Copy/Paste)
 
 ```bash
-pkill -f "uvicorn app.main:app" || true
-pkill -f "app.worker" || true
-pkill -f "http.server 8788" || true
-docker compose -f "/mnt/velocity/Multi-Agent Swarm/backend-engine/docker-compose.fullstack.yml" down || true
+cd "/mnt/velocity/Multi-Agent Swarm/backend-engine"
+./scripts/stop-dev.sh
+docker compose -f docker-compose.fullstack.yml down 2>/dev/null || true
 ```
 
 ---
