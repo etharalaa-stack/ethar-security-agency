@@ -320,13 +320,23 @@ python -m app.worker
 
 ---
 
-## 15) Coolify — Copy/Paste
+## 15) Coolify + Hetzner (128.140.121.115) — Copy/Paste
 
-1. New Resource → Docker Compose  
-2. Repository: `ethar-security-agency`  
-3. Compose file: `docker-compose.fullstack.yml`  
-4. Env: الصق من `.env.production.example` بعد التعبئة  
-5. Deploy  
+**دليل كامل:** [`COOLIFY-HETZNER.md`](COOLIFY-HETZNER.md)
+
+```bash
+cd "/mnt/velocity/Multi-Agent Swarm/backend-engine"
+./scripts/coolify-one-shot.sh
+git push -u origin main
+```
+
+في Coolify (`http://128.140.121.115:8000`):
+
+1. **production** → New → Public Repository → `etharalaa-stack/ethar-security-agency`  
+2. **Docker Compose** → `docker-compose.coolify.yml`  
+3. **Environment** → انسخ `.env.coolify.example` + `ADMIN_SECRET=$(openssl rand -hex 32)`  
+4. Domain على service **`web`** فقط → Deploy  
+5. `./scripts/smoke-production.sh "https://YOUR_PUBLIC_URL"`
 
 ---
 
